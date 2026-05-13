@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user resume, skills and job search preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "jobTitleGoal": { "type": "string" },
+        "linkedinUrl": { "type": "string" },
+        "resumeText": { "type": "string" },
+        "skills": { "type": "array" },
+        "preferences": { "type": "string" },
+        "isOnboarded": { "type": "boolean" },
+        "lastScrapeAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Job": {
+      "title": "Job Listing",
+      "description": "A job found by the agent for the user",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "link": { "type": "string" },
+        "source": { "type": "string" },
+        "postedAt": { "type": "string" },
+        "salary": { "type": "string" },
+        "fitScore": { "type": "number" },
+        "analysis": { "type": "string" },
+        "isNew": { "type": "boolean" }
+      },
+      "required": ["title", "company", "link"]
+    },
+    "Application": {
+      "title": "Application Tracker",
+      "description": "Tracks the status of a job application and associated AI content",
+      "type": "object",
+      "properties": {
+        "jobId": { "type": "string" },
+        "status": { "type": "string", "enum": ["potential", "interested", "reviewing_resume", "applied", "interviewing", "rejected", "offer"] },
+        "customResume": { "type": "string" },
+        "customCoverLetter": { "type": "string" },
+        "appliedLocally": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["jobId", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Main user document"
+    },
+    "/users/{userId}/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Collection of jobs curated for the user"
+    },
+    "/users/{userId}/applications/{appId}": {
+      "schema": "Application",
+      "description": "Tracking for jobs the user is interested in"
+    }
+  }
+}

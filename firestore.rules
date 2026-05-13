@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 1. User Validation
+    function isValidUser(data) {
+      return data.uid == request.auth.uid &&
+             data.email == request.auth.token.email &&
+             (data.get('displayName', '') is string && data.get('displayName', '').size() <= 200) &&
+             (data.get('resumeText', '') is string && data.get('resumeText', '').size() <= 50000) &&
+             (data.get('skills', []) is list && data.get('skills', []).size() <= 50) &&
+             (data.get('preferences', '') is string && data.get('preferences', '').size() <= 2000);
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isEmailVerified() && isValidUser(incoming());
+      allow update: if isOwner(userId) && isEmailVerified() && isValidUser(incoming()) &&
+                    incoming().uid == existing().uid &&
+                    incoming().email == existing().email;
+
+      // 2. Job Validation
+      function isValidJob(data) {
+        return data.title is string && data.title.size() <= 500 &&
+               data.company is string && data.company.size() <= 500 &&
+               data.link is string && data.link.size() <= 2000 &&
+               (data.get('location', '') is string && data.get('location', '').size() <= 500) &&
+               (data.get('description', '') is string && data.get('description', '').size() <= 10000) &&
+               (data.get('fitScore', 0) is number) &&
+               (data.get('isNew', true) is bool);
+      }
+
+      match /jobs/{jobId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && isEmailVerified() && isValidJob(incoming());
+        allow update: if isOwner(userId) && isEmailVerified() && isValidJob(incoming());
+        allow delete: if isOwner(userId);
+      }
+
+      // 3. Application Validation
+      function isValidApplication(data) {
+        return data.jobId is string && data.jobId.size() <= 128 &&
+               data.status in ['potential', 'interested', 'reviewing_resume', 'applied', 'interviewing', 'rejected', 'offer'] &&
+               (data.get('customResume', '') is string && data.get('customResume', '').size() <= 50000) &&
+               (data.get('customCoverLetter', '') is string && data.get('customCoverLetter', '').size() <= 10000) &&
+               (data.get('appliedLocally', false) is bool);
+      }
+
+      match /applications/{appId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && isEmailVerified() && isValidApplication(incoming());
+        allow update: if isOwner(userId) && isEmailVerified() && isValidApplication(incoming()) &&
+                      incoming().jobId == existing().jobId;
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

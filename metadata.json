@@ -1,0 +1,6 @@
+{
+  "name": "TalentFlow AI",
+  "description": "An intelligent job search agent that scrapes listings, analyzes fit against your resume, and automates tracking and application preparation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
